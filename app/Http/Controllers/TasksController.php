@@ -15,11 +15,17 @@ class TasksController extends Controller
      */
     public function index()
     {
-        $tasks = Task::all();
+        $data = [];
+        if (\Auth::check()) {
+            $user = \Auth::user();
+            $tasks = $user->tasks()->orderBy('created_at', 'desc')->paginate(10);
+            $data = [
+                'user' => $user,
+                'items' => $tasks
+            ];
+        }
 
-        return view('tasks.index', [
-            'items' => $tasks,
-        ]);
+        return view('tasks.index', $data);
     }
 
     /**
@@ -51,6 +57,7 @@ class TasksController extends Controller
         $task = new Task;
         $task->content = $request->content;
         $task->status = $request->status;
+        $task->user_id = \Auth::id();
         $task->save();
 
         return redirect('/');
@@ -65,10 +72,14 @@ class TasksController extends Controller
     public function show($id)
     {
         $task = Task::find($id);
-
-        return view('tasks.show', [
-            'item' => $task,
-        ]);    }
+        if (\Auth::id() == $task->user_id) {
+            return view('tasks.show', [
+                'item' => $task,
+            ]);
+        } else {
+            return redirect('/');
+        }
+    }
 
     /**
      * Show the form for editing the specified resource.
@@ -79,10 +90,13 @@ class TasksController extends Controller
     public function edit($id)
     {
         $task = Task::find($id);
-
-        return view('tasks.edit', [
-            'item' => $task,
-        ]);
+        if (\Auth::id() == $task->user_id) {
+            return view('tasks.edit', [
+                'item' => $task,
+            ]);
+        } else {
+            return redirect('/');
+        }
     }
 
     /**
@@ -115,8 +129,9 @@ class TasksController extends Controller
     public function destroy($id)
     {
         $task = Task::find($id);
-        $task->delete();
-
+        if(\Auth::id() == $task->user_id) {
+            $task->delete();
+        }
         return redirect('/');
     }
 }
